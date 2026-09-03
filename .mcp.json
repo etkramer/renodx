@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "renodx-devkit": {
+      "command": "I:\\renodx\\build\\Debug\\renodx-mcp-bridge.exe",
+      "args": []
+    }
+  }
+}

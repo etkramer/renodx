@@ -11,27 +11,30 @@
 
 #include "../../mods/shader.hpp"
 #include "../../utils/settings.hpp"
+#include "./features/gtao.h"
 #include "./shared.h"
 
 namespace {
 
-ShaderInjectData shader_injection;
+// Each feature owns its settings and shader replacements; this concatenates them.
+renodx::utils::settings::Settings BuildSettings() {
+  renodx::utils::settings::Settings settings;
+  for (const auto& feature : {features::gtao::Settings()}) {
+    settings.insert(settings.end(), feature.begin(), feature.end());
+  }
+  return settings;
+}
 
-// Populated once DevKit identifies stable target hashes.
-renodx::mods::shader::CustomShaders custom_shaders = {};
+renodx::mods::shader::CustomShaders BuildShaders() {
+  renodx::mods::shader::CustomShaders shaders;
+  for (const auto& feature : {features::gtao::Shaders()}) {
+    shaders.insert(feature.begin(), feature.end());
+  }
+  return shaders;
+}
 
-renodx::utils::settings::Settings settings = {
-    new renodx::utils::settings::Setting{
-        .key = "DebugView",
-        .binding = &shader_injection.debug_view,
-        .value_type = renodx::utils::settings::SettingValueType::INTEGER,
-        .default_value = 0.f,
-        .label = "Debug View",
-        .section = "Debug",
-        .tooltip = "Displays an intermediate buffer instead of the final image.",
-        .labels = {"Off"},
-    },
-};
+renodx::utils::settings::Settings settings = BuildSettings();
+renodx::mods::shader::CustomShaders custom_shaders = BuildShaders();
 
 }  // namespace
 
