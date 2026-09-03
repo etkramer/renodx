@@ -1,0 +1,79 @@
+{
+  "version": "2.0.0",
+  "options": {
+    "cwd": "${workspaceFolder}"
+  },
+  "tasks": [
+    {
+      "label": "CMake: Configure (clang-x64)",
+      "detail": "One-time. Ninja regenerates automatically after CMakeLists changes.",
+      "type": "process",
+      "command": "pwsh.exe",
+      "args": [
+        "-NoProfile",
+        "-Command",
+        "$vs = & 'C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\vswhere.exe' -latest -property installationPath; Import-Module (Join-Path $vs 'Common7\\Tools\\Microsoft.VisualStudio.DevShell.dll'); Enter-VsDevShell -VsInstallPath $vs -SkipAutomaticLocation -DevCmdArguments '-arch=x64 -host_arch=x64' | Out-Null; cmake --preset clang-x64"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Build batmanak-rend2",
+      "type": "process",
+      "command": "pwsh.exe",
+      "args": [
+        "-NoProfile",
+        "-Command",
+        "$vs = & 'C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\vswhere.exe' -latest -property installationPath; Import-Module (Join-Path $vs 'Common7\\Tools\\Microsoft.VisualStudio.DevShell.dll'); Enter-VsDevShell -VsInstallPath $vs -SkipAutomaticLocation -DevCmdArguments '-arch=x64 -host_arch=x64' | Out-Null; cmake --build --preset clang-x64-debug --target batmanak-rend2"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "Build devkit",
+      "type": "process",
+      "command": "pwsh.exe",
+      "args": [
+        "-NoProfile",
+        "-Command",
+        "$vs = & 'C:\\Program Files (x86)\\Microsoft Visual Studio\\Installer\\vswhere.exe' -latest -property installationPath; Import-Module (Join-Path $vs 'Common7\\Tools\\Microsoft.VisualStudio.DevShell.dll'); Enter-VsDevShell -VsInstallPath $vs -SkipAutomaticLocation -DevCmdArguments '-arch=x64 -host_arch=x64' | Out-Null; cmake --build --preset clang-x64-debug --target devkit mcp_bridge"
+      ],
+      "problemMatcher": "$msCompile"
+    },
+    {
+      "label": "Link addons into game folder",
+      "detail": "Symlinks built addons into Binaries\\Win64. Needs Developer Mode or an elevated shell.",
+      "type": "process",
+      "command": "pwsh.exe",
+      "args": [
+        "-NoProfile",
+        "-Command",
+        "$game = 'D:\\SteamLibrary\\steamapps\\common\\Batman Arkham Knight\\Binaries\\Win64'; foreach ($n in 'renodx-batmanak-rend2.addon64', 'renodx-devkit.addon64') { $src = Join-Path '${workspaceFolder}\\build\\Debug' $n; $dst = Join-Path $game $n; if (-not (Test-Path $src)) { Write-Host ('skip {0} (not built)' -f $n); continue }; $existing = Get-Item $dst -ErrorAction SilentlyContinue; if ($existing -and -not $existing.LinkType) { Write-Host ('CONFLICT: {0} is a real file, leaving it alone' -f $dst); continue }; if ($existing) { Remove-Item $dst }; New-Item -ItemType SymbolicLink -Path $dst -Target $src | Out-Null; Write-Host ('linked {0}' -f $n) }"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Build & Link batmanak-rend2",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "Build batmanak-rend2",
+        "Link addons into game folder"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Tail ReShade.log",
+      "type": "process",
+      "command": "pwsh.exe",
+      "args": [
+        "-NoProfile",
+        "-Command",
+        "Get-Content -Wait -Tail 40 'D:\\SteamLibrary\\steamapps\\common\\Batman Arkham Knight\\Binaries\\Win64\\ReShade.log'"
+      ],
+      "isBackground": true,
+      "problemMatcher": []
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://cdn.jsdelivr.net/gh/clshortfuse/renodx/renodx-metadata-schema.json",
+  "id": "batmanak-rend2",
+  "title": "Batman: Arkham Knight (Rendering)",
+  "maintainers": [
+    "etkramer"
+  ],
+  "status": "experimental",
+  "deploy": {
+    "steam_appid": 208650,
+    "game_exe": "BatmanAK.exe",
+    "process_name": "BatmanAK.exe",
+    "api": "d3d11",
+    "architecture": [
+      "x64"
+    ],
+    "reshade_preferred_name": "dxgi.dll"
+  }
+}

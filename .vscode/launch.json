@@ -8,6 +8,17 @@
       "processId": "${command:pickProcess}"
     },
     {
+      "name": "Launch BatmanAK.exe",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "D:\\SteamLibrary\\steamapps\\common\\Batman Arkham Knight\\Binaries\\Win64\\BatmanAK.exe",
+      "cwd": "D:\\SteamLibrary\\steamapps\\common\\Batman Arkham Knight\\Binaries\\Win64",
+      "args": ["-windowed", "-nosplash", "-nologo"],
+      "symbolSearchPath": "${workspaceFolder}\\build\\Debug",
+      "preLaunchTask": "Build & Link batmanak-rend2",
+      "console": "internalConsole"
+    },
+    {
       "name": "Deploy Early Access",
       "type": "PowerShell",
       "request": "launch",
