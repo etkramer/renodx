@@ -99,6 +99,8 @@ struct State {
   ID3D11Resource* velocity_resource = nullptr;
   ID3D11Resource* velocity_srv_resource = nullptr;
   runtime::d3d11::ComPtr<ID3D11ShaderResourceView> velocity_srv;
+  ID3D11Resource* velocity_rtv_resource = nullptr;
+  runtime::d3d11::ComPtr<ID3D11RenderTargetView> velocity_rtv;
 };
 
 inline State state;
@@ -250,6 +252,20 @@ inline ID3D11ShaderResourceView* EnsureSrv(ID3D11Device* device, ID3D11Resource*
   if (*cached_resource == resource && *cached != nullptr) return cached->Get();
   cached->Reset();
   if (FAILED(device->CreateShaderResourceView(resource, nullptr, cached->GetAddressOf()))) {
+    *cached_resource = nullptr;
+    return nullptr;
+  }
+  *cached_resource = resource;
+  return cached->Get();
+}
+
+inline ID3D11RenderTargetView* EnsureRtv(ID3D11Device* device, ID3D11Resource* resource,
+                                         ID3D11Resource** cached_resource,
+                                         runtime::d3d11::ComPtr<ID3D11RenderTargetView>* cached) {
+  if (resource == nullptr) return nullptr;
+  if (*cached_resource == resource && *cached != nullptr) return cached->Get();
+  cached->Reset();
+  if (FAILED(device->CreateRenderTargetView(resource, nullptr, cached->GetAddressOf()))) {
     *cached_resource = nullptr;
     return nullptr;
   }
@@ -572,9 +588,28 @@ inline void OnDestroyCommandList(reshade::api::command_list* cmd_list) {
   renodx::utils::data::Delete<CommandListData>(cmd_list);
 }
 
-inline void OnPresent(reshade::api::command_queue*, reshade::api::swapchain*,
+// Only dynamic geometry writes RT4, and with motion blur off nothing consumes it, so the engine
+// leaves it alone and static pixels keep older frames' velocities. Present is the one point ordered
+// against every deferred context: this frame's resolve has read it, next frame's g-buffer has not.
+inline void ClearVelocity(reshade::api::command_queue* queue) {
+  if (enabled == 0.f || state.failed || queue == nullptr || state.velocity_resource == nullptr) {
+    return;
+  }
+  auto* device = runtime::d3d11::GetDevice(queue->get_device());
+  auto* context = runtime::d3d11::GetContext(queue->get_immediate_command_list());
+  if (device == nullptr || context == nullptr) return;
+
+  auto* rtv = EnsureRtv(device, state.velocity_resource, &state.velocity_rtv_resource,
+                        &state.velocity_rtv);
+  if (rtv == nullptr) return;
+  static const FLOAT ZERO[4] = {};
+  context->ClearRenderTargetView(rtv, ZERO);
+}
+
+inline void OnPresent(reshade::api::command_queue* queue, reshade::api::swapchain*,
                       const reshade::api::rect*, const reshade::api::rect*, uint32_t,
                       const reshade::api::rect*) {
+  ClearVelocity(queue);
   state.frame_index.fetch_add(1u);
   // Only advance on frames that saw the g-buffer, or both slots would hold the same camera.
   if (state.view_snapshot_taken.exchange(false)) state.view_snapshot_index ^= 1u;

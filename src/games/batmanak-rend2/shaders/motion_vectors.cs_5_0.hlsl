@@ -9,8 +9,7 @@ Texture2D<float4> t1 : register(t1);  // velocity RT4, dynamic geometry only
 cbuffer cb0 : register(b0) { float4 cb0[11]; }  // occlusion CS view constants
 
 // The g-buffer VS shared per-view block, all 10 registers of it. [0..3] takes translated world to
-// clip, [4..7] takes last frame's translated world to last frame's clip, [9] is PreViewTranslation.
-// Double buffered only for [9], to rebase this frame's translation onto the previous one.
+// clip, [9] is PreViewTranslation. Double buffered so last frame's copy supplies both.
 cbuffer view_current : register(b3) { float4 view_constants[10]; }
 cbuffer view_previous : register(b4) { float4 view_previous[10]; }
 
@@ -73,8 +72,10 @@ float4x4 Invert(float4x4 m) {
 
   float4x4 to_clip = float4x4(view_constants[0], view_constants[1], view_constants[2],
                               view_constants[3]);
-  float4x4 to_previous_clip = float4x4(view_constants[4], view_constants[5], view_constants[6],
-                                       view_constants[7]);
+  // Last frame's own [0..3] rather than the engine's cb1[4..7], so reprojection does not depend on
+  // the engine keeping PrevViewProjection up to date for a consumer we bypass.
+  float4x4 to_previous_clip = float4x4(view_previous[0], view_previous[1], view_previous[2],
+                                       view_previous[3]);
 
   // Any scale of the clip position inverts to the same point once divided out, so w = 1 works.
   float4 translated_world = mul(float4(current_ndc, raw_depth, 1.f), Invert(to_clip));
@@ -103,6 +104,8 @@ float4x4 Invert(float4x4 m) {
   if (dlaa_debug_view == DLAA_DEBUG_MOTION) {
     // Blue marks the behind-the-previous-camera guard, which zeroes motion and would otherwise
     // be indistinguishable from a genuinely still pixel.
-    u2[thread_id] = float4(saturate(0.5f + motion * 0.05f), behind_camera ? 1.f : 0.f, 1.f);
+    // Relative to the resolution, so a fast camera turn does not clip the whole frame.
+    u2[thread_id] = float4(saturate(0.5f + motion / dimensions * 16.f), behind_camera ? 1.f : 0.f,
+                           1.f);
   }
 }
