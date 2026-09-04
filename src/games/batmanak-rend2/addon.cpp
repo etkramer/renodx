@@ -11,15 +11,17 @@
 
 #include "../../mods/shader.hpp"
 #include "../../utils/settings.hpp"
+#include "./features/dlaa.h"
 #include "./features/gtao.h"
 #include "./shared.h"
 
 namespace {
 
-// Each feature owns its settings and shader replacements; this concatenates them.
+// A feature exposes Settings() and optionally Shaders(); features with runtime state also
+// expose Register()/Unregister(), called from DllMain below.
 renodx::utils::settings::Settings BuildSettings() {
   renodx::utils::settings::Settings settings;
-  for (const auto& feature : {features::gtao::Settings()}) {
+  for (const auto& feature : {features::gtao::Settings(), features::dlaa::Settings()}) {
     settings.insert(settings.end(), feature.begin(), feature.end());
   }
   return settings;
@@ -27,7 +29,7 @@ renodx::utils::settings::Settings BuildSettings() {
 
 renodx::mods::shader::CustomShaders BuildShaders() {
   renodx::mods::shader::CustomShaders shaders;
-  for (const auto& feature : {features::gtao::Shaders()}) {
+  for (const auto& feature : {features::gtao::Shaders(), features::dlaa::Shaders()}) {
     shaders.insert(feature.begin(), feature.end());
   }
   return shaders;
@@ -47,8 +49,11 @@ BOOL APIENTRY DllMain(HMODULE h_module, DWORD fdw_reason, LPVOID lpv_reserved) {
       if (!reshade::register_addon(h_module)) return FALSE;
       // Keep settings out of the stock batmanak mod's [renodx-preset*] namespace.
       renodx::utils::settings::global_name = "batmanak-rend2";
+      features::dlaa::SetModule(h_module);
+      features::dlaa::Register();
       break;
     case DLL_PROCESS_DETACH:
+      features::dlaa::Unregister();
       reshade::unregister_addon(h_module);
       break;
   }

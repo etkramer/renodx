@@ -731,6 +731,15 @@ foreach(FILE ${ADDON_FILES})
   )
 endforeach()
 
+# batmanak-rend2 integrates DLSS itself rather than hooking a game's own copy.
+if(TARGET batmanak-rend2)
+  set(NGX_LIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/DLSS/lib/Windows_x86_64/x64)
+  target_link_libraries(batmanak-rend2 PRIVATE
+    $<IF:$<CONFIG:Debug>,${NGX_LIB_DIR}/nvsdk_ngx_s_dbg.lib,${NGX_LIB_DIR}/nvsdk_ngx_s.lib>
+    d3d11.lib
+    dxgi.lib)
+endif()
+
 list(LENGTH SKIPPED_ADDON_TARGETS SKIPPED_ADDON_TARGET_COUNT)
 message(STATUS "Skipped ${SKIPPED_ADDON_TARGET_COUNT} game addon targets not listed for ${RENODX_TARGET_ARCHITECTURE}")
 
